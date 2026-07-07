@@ -3,198 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的桌遊收藏清單</title>
+    <title>🎲 我的桌遊收藏清單</title>
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --bg-color: #f8f9fa;
+            --bg-color: #f4f6f9;
             --card-bg: #ffffff;
-            --tag-bg: #e1f5fe;
-            --tag-color: #0288d1;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-light: #e0e7ff;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 10px 30px rgba(79, 70, 229, 0.08);
+            --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.08);
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-color);
             margin: 0;
-            padding: 20px;
-            color: #333;
+            padding: 0;
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
         }
+
+        /* 固定在頂部的精美 Header */
         header {
-            text-align: center;
-            margin-bottom: 30px;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            padding: 20px;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
         }
-        h1 { color: var(--primary-color); }
-        
-        /* 搜尋區塊 */
-        .filter-container {
-            max-width: 800px;
-            margin: 0 auto 30px auto;
-            display: flex;
-            gap: 15px;
-        }
-        .search-input {
-            flex: 2;
-            padding: 12px 20px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        .search-input:focus { border-color: var(--primary-color); }
-        
-        /* 收藏網格佈局 */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 25px;
+
+        .header-container {
             max-width: 1200px;
             margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
         }
-        
-        /* 卡片樣式 */
+
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 搜尋框 */
+        .filter-container {
+            flex: 1;
+            max-width: 450px;
+            min-width: 280px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 30px;
+            font-size: 15px;
+            outline: none;
+            background-color: #f8fafc;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+
+        /* 主網格區塊 */
+        main {
+            max-width: 1240px;
+            margin: 40px auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 30px;
+        }
+
+        /* 桌遊卡片 */
         .card {
             background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 20px;
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
-            text-align: left;
+            border: 1px solid rgba(226, 232, 240, 0.5);
         }
+
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(79, 70, 229, 0.2);
         }
+
+        /* 圖片容器 */
         .img-container {
             width: 100%;
-            height: 200px;
-            background: #f1f2f6;
+            height: 240px;
+            background: #f8fafc;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
+            border-bottom: 1px solid #f1f5f9;
         }
+
         .card img {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            padding: 10px;
+            padding: 16px;
             box-sizing: border-box;
+            transition: transform 0.5s ease;
         }
+
+        .card:hover img {
+            transform: scale(1.04);
+        }
+
+        /* 卡片文字與資訊 */
         .card-info {
-            padding: 15px;
+            padding: 20px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
         }
+
         .card-title {
             font-size: 18px;
-            font-weight: bold;
+            font-weight: 700;
+            line-height: 1.4;
             margin: 0;
-            color: var(--primary-color);
+            color: var(--text-main);
         }
-        .card-meta {
-            font-size: 14px;
-            color: #57606f;
-        }
-        
-        /* 標籤樣式（類型與時間） */
+
+        /* 膠囊標籤 */
         .tags-container {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
-            margin-top: 4px;
         }
+
         .tag {
-            background-color: var(--tag-bg);
-            color: var(--tag-color);
             font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
-        .tag.time {
-            background-color: #ede7f6;
-            color: #5e35b1;
-        }
-        
-        /* 描述樣式 */
+
+        .tag.players { background-color: #f0fdf4; color: #16a34a; }
+        .tag.time { background-color: #fff7ed; color: #ea580c; }
+        .tag.type { background-color: #f5f3ff; color: #7c3aed; }
+
+        /* ✨ 遊戲簡介：核心修改區塊 ✨ */
         .card-desc {
-            font-size: 13px;
-            color: #747d8c;
-            border-top: 1px dashed #ddd;
-            padding-top: 8px;
-            margin-top: 4px;
-            line-height: 1.4;
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 0;
+            margin-top: 0;
+            
+            /* 預設隱藏狀態與平滑動畫設定 */
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                        opacity 0.3s ease, 
+                        padding 0.4s ease, 
+                        margin 0.4s ease;
         }
+
+        /* ✨ 當滑鼠停在卡片上時 (.card:hover)，顯示簡介 ✨ */
+        .card:hover .card-desc {
+            max-height: 120px; /* 給予足夠的展開高度 */
+            opacity: 1;
+            padding-top: 12px;
+            margin-top: 4px;
+            
+            display: -webkit-box;
+            -webkit-line-clamp: 4; /* 展開後最多顯示 4 行 */
+            -webkit-box-orient: vertical;
+        }
+
+        /* 狀態訊息 */
         .status-msg {
             text-align: center;
-            font-size: 18px;
-            color: #7f8c8d;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-muted);
             grid-column: 1 / -1;
-            padding: 50px 0;
+            padding: 80px 0;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>🎲 我的桌遊收藏清單</h1>
+        <div class="header-container">
+            <h1>🎲 我的桌遊收藏</h1>
+            <div class="filter-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="搜尋名稱、類型或簡介...">
+            </div>
+        </div>
     </header>
 
-    <div class="filter-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="輸入名稱或簡介關鍵字搜尋桌遊...">
-    </div>
-
-    <div class="grid" id="bgList">
-        <div class="status-msg">資料載入中，請稍候...</div>
-    </div>
+    <main>
+        <div class="grid" id="bgList">
+            <div class="status-msg">✨ 正在從雲端載入您的收藏...</div>
+        </div>
+    </main>
 
     <script>
-        // 您的 Google 試算表 ID
         const sheetId = '1GVdpagEiRHkQhaBhlCbPW5_Gg1tVAUdJnenyO2Ql35s';
         let allGames = []; 
 
-        // 透過 Google Visualization API 載入，徹底解決本地端 file:// 的 CORS 瀏覽器限制
         window.handleGoogleData = function(response) {
             try {
                 const rows = response.table.rows;
                 
-                // 欄位精准定位：
-                // A(0)=NAME, B(1)=Image, C(2)=Min/MaxPlayers, D(3)=PLAYTIME, E(4)=GAMETYPE, F(5)=DESCRIPTION
                 allGames = rows.map(row => {
                     const cells = row.c;
                     return {
                         name: cells[0] ? cells[0].v : '',
                         image: cells[1] ? cells[1].v : '',
-                        players: cells[2] ? cells[2].v : '未註明',
+                        players: cells[2] ? cells[2].v : '',
                         playtime: cells[3] ? cells[3].v : '',
                         gametype: cells[4] ? cells[4].v : '',
                         description: cells[5] ? cells[5].v : ''
                     };
-                }).filter(game => game.name && game.name.toString().trim() !== ''); // 過濾空行
+                }).filter(game => game.name && game.name.toString().trim() !== '');
 
                 renderGames(allGames);
             } catch(e) {
-                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:red;">解析資料失敗：${e}</div>`;
+                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:#ef4444;">❌ 解析資料失敗：${e}</div>`;
             }
         };
 
-        // 動態注入 script 標籤
         const script = document.createElement('script');
         script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1`;
         document.body.appendChild(script);
 
-        // 渲染卡片的函式
         function renderGames(games) {
             const listEl = document.getElementById('bgList');
             listEl.innerHTML = '';
 
             if (games.length === 0) {
-                listEl.innerHTML = '<div class="status-msg">找不到符合條件的桌遊 📦</div>';
+                listEl.innerHTML = '<div class="status-msg">📦 找不到符合條件的桌遊</div>';
                 return;
             }
 
@@ -202,23 +284,21 @@
                 const card = document.createElement('div');
                 card.className = 'card';
 
-                const displayImg = game.image ? game.image : 'https://via.placeholder.com/200x200?text=No+Image';
+                const displayImg = game.image ? game.image : 'https://via.placeholder.com/260x240?text=No+Image';
 
-                // 動態產生標籤 HTML（欄位有填寫才顯示）
                 let tagsHtml = '';
-                if (game.gametype) tagsHtml += `<span class="tag">${game.gametype}</span>`;
+                if (game.players) tagsHtml += `<span class="tag players">👥 ${game.players}</span>`;
                 if (game.playtime) tagsHtml += `<span class="tag time">⏳ ${game.playtime}</span>`;
+                if (game.gametype) tagsHtml += `<span class="tag type">🧩 ${game.gametype}</span>`;
 
-                // 動態產生描述 HTML
                 let descHtml = game.description ? `<div class="card-desc">${game.description}</div>` : '';
 
                 card.innerHTML = `
                     <div class="img-container">
-                        <img src="${displayImg}" alt="${game.name}" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x200?text=No+Image';">
+                        <img src="${displayImg}" alt="${game.name}" onerror="this.onerror=null; this.src='https://via.placeholder.com/260x240?text=No+Image';">
                     </div>
                     <div class="card-info">
-                        <div class="card-title">${game.name}</div>
-                        <div class="card-meta">👥 人數：${game.players}</div>
+                        <h2 class="card-title">${game.name}</h2>
                         ${tagsHtml ? `<div class="tags-container">${tagsHtml}</div>` : ''}
                         ${descHtml}
                     </div>
@@ -227,13 +307,13 @@
             });
         }
 
-        // 搜尋監聽功能（支援同時搜尋「名稱」與「描述簡介」）
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const keyword = e.target.value.toLowerCase().trim();
             const filtered = allGames.filter(game => {
                 const nameMatch = game.name.toString().toLowerCase().includes(keyword);
+                const typeMatch = game.gametype ? game.gametype.toString().toLowerCase().includes(keyword) : false;
                 const descMatch = game.description ? game.description.toString().toLowerCase().includes(keyword) : false;
-                return nameMatch || descMatch;
+                return nameMatch || typeMatch || descMatch;
             });
             renderGames(filtered);
         });
