@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的桌遊收藏清單</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --tag-bg: #e1f5fe;
+            --tag-color: #0288d1;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 { color: var(--primary-color); }
+        
+        /* 搜尋區塊 */
+        .filter-container {
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+            display: flex;
+            gap: 15px;
+        }
+        .search-input {
+            flex: 2;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .search-input:focus { border-color: var(--primary-color); }
+        
+        /* 收藏網格佈局 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* 卡片樣式 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .img-container {
+            width: 100%;
+            height: 200px;
+            background: #f1f2f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .card-info {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        .card-meta {
+            font-size: 14px;
+            color: #57606f;
+        }
+        
+        /* 標籤樣式（類型與時間） */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .tag {
+            background-color: var(--tag-bg);
+            color: var(--tag-color);
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .tag.time {
+            background-color: #ede7f6;
+            color: #5e35b1;
+        }
+        
+        /* 描述樣式 */
+        .card-desc {
+            font-size: 13px;
+            color: #747d8c;
+            border-top: 1px dashed #ddd;
+            padding-top: 8px;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .status-msg {
+            text-align: center;
+            font-size: 18px;
+            color: #7f8c8d;
+            grid-column: 1 / -1;
+            padding: 50px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎲 我的桌遊收藏清單</h1>
+    </header>
+
+    <div class="filter-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="輸入名稱或簡介關鍵字搜尋桌遊...">
+    </div>
+
+    <div class="grid" id="bgList">
+        <div class="status-msg">資料載入中，請稍候...</div>
+    </div>
+
+    <script>
+        // 您的 Google 試算表 ID
+        const sheetId = '1GVdpagEiRHkQhaBhlCbPW5_Gg1tVAUdJnenyO2Ql35s';
+        let allGames = []; 
+
+        // 透過 Google Visualization API 載入，徹底解決本地端 file:// 的 CORS 瀏覽器限制
+        window.handleGoogleData = function(response) {
+            try {
+                const rows = response.table.rows;
+                
+                // 欄位精准定位：
+                // A(0)=NAME, B(1)=Image, C(2)=Min/MaxPlayers, D(3)=PLAYTIME, E(4)=GAMETYPE, F(5)=DESCRIPTION
+                allGames = rows.map(row => {
+                    const cells = row.c;
+                    return {
+                        name: cells[0] ? cells[0].v : '',
+                        image: cells[1] ? cells[1].v : '',
+                        players: cells[2] ? cells[2].v : '未註明',
+                        playtime: cells[3] ? cells[3].v : '',
+                        gametype: cells[4] ? cells[4].v : '',
+                        description: cells[5] ? cells[5].v : ''
+                    };
+                }).filter(game => game.name && game.name.toString().trim() !== ''); // 過濾空行
+
+                renderGames(allGames);
+            } catch(e) {
+                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:red;">解析資料失敗：${e}</div>`;
+            }
+        };
+
+        // 動態注入 script 標籤
+        const script = document.createElement('script');
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1`;
+        document.body.appendChild(script);
+
+        // 渲染卡片的函式
+        function renderGames(games) {
+            const listEl = document.getElementById('bgList');
+            listEl.innerHTML = '';
+
+            if (games.length === 0) {
+                listEl.innerHTML = '<div class="status-msg">找不到符合條件的桌遊 📦</div>';
+                return;
+            }
+
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                const displayImg = game.image ? game.image : 'https://via.placeholder.com/200x200?text=No+Image';
+
+                // 動態產生標籤 HTML（欄位有填寫才顯示）
+                let tagsHtml = '';
+                if (game.gametype) tagsHtml += `<span class="tag">${game.gametype}</span>`;
+                if (game.playtime) tagsHtml += `<span class="tag time">⏳ ${game.playtime}</span>`;
+
+                // 動態產生描述 HTML
+                let descHtml = game.description ? `<div class="card-desc">${game.description}</div>` : '';
+
+                card.innerHTML = `
+                    <div class="img-container">
+                        <img src="${displayImg}" alt="${game.name}" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x200?text=No+Image';">
+                    </div>
+                    <div class="card-info">
+                        <div class="card-title">${game.name}</div>
+                        <div class="card-meta">👥 人數：${game.players}</div>
+                        ${tagsHtml ? `<div class="tags-container">${tagsHtml}</div>` : ''}
+                        ${descHtml}
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        // 搜尋監聽功能（支援同時搜尋「名稱」與「描述簡介」）
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const keyword = e.target.value.toLowerCase().trim();
+            const filtered = allGames.filter(game => {
+                const nameMatch = game.name.toString().toLowerCase().includes(keyword);
+                const descMatch = game.description ? game.description.toString().toLowerCase().includes(keyword) : false;
+                return nameMatch || descMatch;
+            });
+            renderGames(filtered);
+        });
+    </script>
+</body>
+</html>
