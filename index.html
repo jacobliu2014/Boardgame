@@ -26,7 +26,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 固定在頂部的精美 Header */
         header {
             position: sticky;
             top: 0;
@@ -61,7 +60,6 @@
             gap: 8px;
         }
 
-        /* 搜尋框 */
         .filter-container {
             flex: 1;
             max-width: 450px;
@@ -86,7 +84,6 @@
             box-shadow: 0 0 0 4px var(--primary-light);
         }
 
-        /* 主網格區塊 */
         main {
             max-width: 1240px;
             margin: 40px auto;
@@ -100,7 +97,6 @@
             gap: 30px;
         }
 
-        /* 桌遊卡片 */
         .card {
             background: var(--card-bg);
             border-radius: 20px;
@@ -118,7 +114,6 @@
             border-color: rgba(79, 70, 229, 0.2);
         }
 
-        /* 圖片容器 */
         .img-container {
             width: 100%;
             height: 240px;
@@ -144,7 +139,6 @@
             transform: scale(1.04);
         }
 
-        /* 卡片文字與資訊 */
         .card-info {
             padding: 20px;
             flex-grow: 1;
@@ -161,7 +155,6 @@
             color: var(--text-main);
         }
 
-        /* 膠囊標籤 */
         .tags-container {
             display: flex;
             flex-wrap: wrap;
@@ -182,7 +175,6 @@
         .tag.time { background-color: #fff7ed; color: #ea580c; }
         .tag.type { background-color: #f5f3ff; color: #7c3aed; }
 
-        /* ✨ 遊戲簡介：核心修改區塊 ✨ */
         .card-desc {
             font-size: 13.5px;
             color: var(--text-muted);
@@ -190,8 +182,6 @@
             border-top: 1px dashed #e2e8f0;
             padding-top: 0;
             margin-top: 0;
-            
-            /* 預設隱藏狀態與平滑動畫設定 */
             max-height: 0;
             opacity: 0;
             overflow: hidden;
@@ -201,19 +191,16 @@
                         margin 0.4s ease;
         }
 
-        /* ✨ 當滑鼠停在卡片上時 (.card:hover)，顯示簡介 ✨ */
         .card:hover .card-desc {
-            max-height: 120px; /* 給予足夠的展開高度 */
+            max-height: 120px;
             opacity: 1;
             padding-top: 12px;
             margin-top: 4px;
-            
             display: -webkit-box;
-            -webkit-line-clamp: 4; /* 展開後最多顯示 4 行 */
+            -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
         }
 
-        /* 狀態訊息 */
         .status-msg {
             text-align: center;
             font-size: 16px;
@@ -245,6 +232,10 @@
         const sheetId = '1GVdpagEiRHkQhaBhlCbPW5_Gg1tVAUdJnenyO2Ql35s';
         let allGames = []; 
 
+        // 1. 自動從網址抓取參數 ?sheet=分頁名稱
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetSheet = urlParams.get('sheet'); 
+
         window.handleGoogleData = function(response) {
             try {
                 const rows = response.table.rows;
@@ -263,12 +254,20 @@
 
                 renderGames(allGames);
             } catch(e) {
-                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:#ef4444;">❌ 解析資料失敗：${e}</div>`;
+                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:#ef4444;">❌ 解析資料失敗，請確認分頁名稱是否正確</div>`;
             }
         };
 
+        // 2. 組裝 Google API 請求網址
+        let apiUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1`;
+        
+        // 如果網址有指定 ?sheet=分頁名稱，就去讀取該分頁
+        if (targetSheet) {
+            apiUrl += `&sheet=${encodeURIComponent(targetSheet)}`;
+        }
+
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1`;
+        script.src = apiUrl;
         document.body.appendChild(script);
 
         function renderGames(games) {
