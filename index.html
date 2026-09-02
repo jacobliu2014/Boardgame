@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎲 我的桌遊收藏清單</title>
+    <title id="pageTitle">🎲 桌遊收藏清單</title>
     <style>
         :root {
             --bg-color: #f4f6f9;
@@ -215,7 +215,7 @@
 
     <header>
         <div class="header-container">
-            <h1>🎲 我的桌遊收藏</h1>
+            <h1 id="headerTitle">🎲 桌遊收藏</h1>
             <div class="filter-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="搜尋名稱、類型或簡介...">
             </div>
@@ -230,11 +230,27 @@
 
     <script>
         const sheetId = '1GVdpagEiRHkQhaBhlCbPW5_Gg1tVAUdJnenyO2Ql35s';
-        let allGames = []; 
+        const defaultSheetName = 'Jack'; // 若網址沒指定，預設發生的分頁名稱
+        let allGames = [];
 
-        // 1. 自動從網址抓取參數 ?sheet=分頁名稱
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetSheet = urlParams.get('sheet'); 
+        // 解析網址 Hash (例如: #/PTC 或 #PTC) 或 Query String (?sheet=PTC)
+        function getTargetSheetName() {
+            const hash = window.location.hash.replace(/^#\/?/, '').trim();
+            if (hash) return decodeURIComponent(hash);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramSheet = urlParams.get('sheet');
+            if (paramSheet) return paramSheet;
+
+            return defaultSheetName;
+        }
+
+        const currentSheetName = getTargetSheetName();
+
+        // 動態更新網頁標題與 Header H1 標題
+        const pageTitleText = `🎲 ${currentSheetName}的桌遊收藏清單`;
+        document.title = pageTitleText;
+        document.getElementById('headerTitle').textContent = `🎲 ${currentSheetName}的桌遊收藏清單`;
 
         window.handleGoogleData = function(response) {
             try {
@@ -254,17 +270,12 @@
 
                 renderGames(allGames);
             } catch(e) {
-                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:#ef4444;">❌ 解析資料失敗，請確認分頁名稱是否正確</div>`;
+                document.getElementById('bgList').innerHTML = `<div class="status-msg" style="color:#ef4444;">❌ 載入失敗，請確認 Google 試算表中是否存在名為「${currentSheetName}」的分頁</div>`;
             }
         };
 
-        // 2. 組裝 Google API 請求網址
-        let apiUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1`;
-        
-        // 如果網址有指定 ?sheet=分頁名稱，就去讀取該分頁
-        if (targetSheet) {
-            apiUrl += `&sheet=${encodeURIComponent(targetSheet)}`;
-        }
+        // 建立 Google API 請求網址
+        const apiUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1&sheet=${encodeURIComponent(currentSheetName)}`;
 
         const script = document.createElement('script');
         script.src = apiUrl;
@@ -315,6 +326,11 @@
                 return nameMatch || typeMatch || descMatch;
             });
             renderGames(filtered);
+        });
+
+        // 監聽 Hash 改變（當使用者在瀏覽器修改 #/後面的名稱時，自動重新整理頁面）
+        window.addEventListener('hashchange', () => {
+            window.location.reload();
         });
     </script>
 </body>
