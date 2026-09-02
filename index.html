@@ -224,7 +224,7 @@
 
     <main>
         <div class="grid" id="bgList">
-            <div class="status-msg">✨ 正在從雲端載入您的收藏...</div>
+            <div class="status-msg">✨ 正在驗證並載入您的桌遊收藏...</div>
         </div>
     </main>
 
@@ -247,11 +247,7 @@
 
         const currentSheetName = getTargetSheetName();
 
-        // 預先更新畫面標題
-        document.title = `🎲 ${currentSheetName}的桌遊收藏清單`;
-        document.getElementById('headerTitle').textContent = `🎲 ${currentSheetName}的桌遊收藏清單`;
-
-        // 2. CSV 解析器 (處理引號與逗號)
+        // 2. CSV 解析器
         function parseCSV(text) {
             const lines = text.split(/\r\n|\n/);
             const result = [];
@@ -291,12 +287,38 @@
                 </div>`;
         }
 
-        // 4. 從 Google 載入指定分頁的 CSV 資料
-        async function fetchSheetData() {
-            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(currentSheetName)}`;
-
+        // 4. 主載入邏輯：先檢查分頁是否存在，再載入資料
+        async function init() {
             try {
+                // 第一步：存取 Google Viz feed HTML 頁面來精確比對現有分頁清單
+                const feedUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/htmlview`;
+                const feedResponse = await fetch(feedUrl);
+                const htmlText = await feedResponse.text();
+
+                // 使用正則表達式解析出所有分頁名稱
+                const sheetNameMatches = htmlText.match(/class="sheets-tab-name"[^>]*>([^<]+)</g);
+                
+                let availableSheets = [];
+                if (sheetNameMatches) {
+                    availableSheets = sheetNameMatches.map(item => {
+                        return item.replace(/class="sheets-tab-name"[^>]*>/, '').replace('<', '').trim();
+                    });
+                }
+
+                // 如果成功抓到清單，且當前目標分頁不包含在內 ➔ 直接認定找不到
+                if (availableSheets.length > 0 && !availableSheets.includes(currentSheetName)) {
+                    showNotFoundError();
+                    return;
+                }
+
+                // 第二步：確定分頁存在，更新網頁標題
+                document.title = `🎲 ${currentSheetName}的桌遊收藏清單`;
+                document.getElementById('headerTitle').textContent = `🎲 ${currentSheetName}的桌遊收藏清單`;
+
+                // 第三步：讀取該分頁的 CSV 資料
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(currentSheetName)}`;
                 const response = await fetch(csvUrl);
+                
                 if (!response.ok) {
                     showNotFoundError();
                     return;
@@ -305,13 +327,11 @@
                 const csvText = await response.text();
                 const parsedRows = parseCSV(csvText);
 
-                // 若傳回無效數據，跳出錯誤
                 if (parsedRows.length <= 1) {
                     showNotFoundError();
                     return;
                 }
 
-                // 去除標題列，組裝資料 (第1欄:名稱, 第2欄:圖片, 第3欄:人數, 第4欄:時間, 第5欄:類型, 第6欄:描述)
                 allGames = parsedRows.slice(1).map(row => {
                     const cleanCell = (val) => val ? val.replace(/^"(.*)"$/, '$1').trim() : '';
                     return {
@@ -325,6 +345,7 @@
                 }).filter(game => game.name !== '');
 
                 renderGames(allGames);
+
             } catch (error) {
                 showNotFoundError();
             }
@@ -384,8 +405,8 @@
             window.location.reload();
         });
 
-        // 啟動資料載入
-        fetchSheetData();
+        // 執行驗證與初始化
+        init();
     </script>
 </body>
 </html>
