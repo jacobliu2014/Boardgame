@@ -224,16 +224,20 @@
 
     <main>
         <div class="grid" id="bgList">
-            <div class="status-msg">✨ 正在驗證並載入您的桌遊收藏...</div>
+            <div class="status-msg">✨ 正在從雲端載入您的收藏...</div>
         </div>
     </main>
 
     <script>
         const sheetId = '1GVdpagEiRHkQhaBhlCbPW5_Gg1tVAUdJnenyO2Ql35s';
-        const defaultSheetName = 'Jack'; // 若網址未指定，預設載入的分頁名稱
+        
+        // 🌟【關鍵點】在這裏填入允許開啟的分頁名稱（需與 Google Sheet 一模一樣）
+        const validSheets = ['Jack', 'PTC'];
+        const defaultSheetName = 'Jack'; // 預設顯示的分頁
+
         let allGames = [];
 
-        // 1. 從網址 Hash (例如: #/PTC) 或 Query String (?sheet=PTC) 抓取目標分頁名稱
+        // 解析網址 Hash
         function getTargetSheetName() {
             const hash = window.location.hash.replace(/^#\/?/, '').trim();
             if (hash) return decodeURIComponent(hash);
@@ -247,36 +251,7 @@
 
         const currentSheetName = getTargetSheetName();
 
-        // 2. CSV 解析器
-        function parseCSV(text) {
-            const lines = text.split(/\r\n|\n/);
-            const result = [];
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-
-                const row = [];
-                let insideQuote = false;
-                let entry = '';
-
-                for (let j = 0; j < line.length; j++) {
-                    const char = line[j];
-                    if (char === '"') {
-                        insideQuote = !insideQuote;
-                    } else if (char === ',' && !insideQuote) {
-                        row.push(entry.trim());
-                        entry = '';
-                    } else {
-                        entry += char;
-                    }
-                }
-                row.push(entry.trim());
-                result.push(row);
-            }
-            return result;
-        }
-
-        // 3. 顯示「找不到清單」的錯誤畫面
+        // 顯示「找不到清單」錯誤畫面
         function showNotFoundError() {
             document.title = `🎲 找不到清單`;
             document.getElementById('headerTitle').textContent = `🎲 找不到清單`;
@@ -287,71 +262,48 @@
                 </div>`;
         }
 
-        // 4. 主載入邏輯：先檢查分頁是否存在，再載入資料
-        async function init() {
-            try {
-                // 第一步：存取 Google Viz feed HTML 頁面來精確比對現有分頁清單
-                const feedUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/htmlview`;
-                const feedResponse = await fetch(feedUrl);
-                const htmlText = await feedResponse.text();
+        // 驗證分頁是否存在
+        if (!validSheets.includes(currentSheetName)) {
+            // 如果網址的分頁名稱不符合，直接跳出錯誤提示，停止發送請求
+            showNotFoundError();
+        } else {
+            // 設定標題
+            document.title = `🎲 ${currentSheetName}的桌遊收藏清單`;
+            document.getElementById('headerTitle').textContent = `🎲 ${currentSheetName}的桌遊收藏清單`;
 
-                // 使用正則表達式解析出所有分頁名稱
-                const sheetNameMatches = htmlText.match(/class="sheets-tab-name"[^>]*>([^<]+)</g);
-                
-                let availableSheets = [];
-                if (sheetNameMatches) {
-                    availableSheets = sheetNameMatches.map(item => {
-                        return item.replace(/class="sheets-tab-name"[^>]*>/, '').replace('<', '').trim();
-                    });
-                }
+            // Google 回傳 JSONP 資料的 CallBack 函式
+            window.handleGoogleData = function(response) {
+                try {
+                    const rows = response.table.rows;
+                    
+                    allGames = rows.map(row => {
+                        const cells = row.c;
+                        return {
+                            name: cells[0] ? cells[0].v : '',
+                            image: cells[1] ? cells[1].v : '',
+                            players: cells[2] ? cells[2].v : '',
+                            playtime: cells[3] ? cells[3].v : '',
+                            gametype: cells[4] ? cells[4].v : '',
+                            description: cells[5] ? cells[5].v : ''
+                        };
+                    }).filter(game => game.name && game.name.toString().trim() !== '');
 
-                // 如果成功抓到清單，且當前目標分頁不包含在內 ➔ 直接認定找不到
-                if (availableSheets.length > 0 && !availableSheets.includes(currentSheetName)) {
+                    renderGames(allGames);
+                } catch(e) {
                     showNotFoundError();
-                    return;
                 }
+            };
 
-                // 第二步：確定分頁存在，更新網頁標題
-                document.title = `🎲 ${currentSheetName}的桌遊收藏清單`;
-                document.getElementById('headerTitle').textContent = `🎲 ${currentSheetName}的桌遊收藏清單`;
-
-                // 第三步：讀取該分頁的 CSV 資料
-                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(currentSheetName)}`;
-                const response = await fetch(csvUrl);
-                
-                if (!response.ok) {
-                    showNotFoundError();
-                    return;
-                }
-
-                const csvText = await response.text();
-                const parsedRows = parseCSV(csvText);
-
-                if (parsedRows.length <= 1) {
-                    showNotFoundError();
-                    return;
-                }
-
-                allGames = parsedRows.slice(1).map(row => {
-                    const cleanCell = (val) => val ? val.replace(/^"(.*)"$/, '$1').trim() : '';
-                    return {
-                        name: cleanCell(row[0]),
-                        image: cleanCell(row[1]),
-                        players: cleanCell(row[2]),
-                        playtime: cleanCell(row[3]),
-                        gametype: cleanCell(row[4]),
-                        description: cleanCell(row[5])
-                    };
-                }).filter(game => game.name !== '');
-
-                renderGames(allGames);
-
-            } catch (error) {
+            // 動態載入 Google API 腳本
+            const apiUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:handleGoogleData&headers=1&sheet=${encodeURIComponent(currentSheetName)}`;
+            const script = document.createElement('script');
+            script.src = apiUrl;
+            script.onerror = function() {
                 showNotFoundError();
-            }
+            };
+            document.body.appendChild(script);
         }
 
-        // 5. 渲染卡片至畫面
         function renderGames(games) {
             const listEl = document.getElementById('bgList');
             listEl.innerHTML = '';
@@ -388,7 +340,7 @@
             });
         }
 
-        // 6. 搜尋框過濾監聽
+        // 搜尋功能
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const keyword = e.target.value.toLowerCase().trim();
             const filtered = allGames.filter(game => {
@@ -400,13 +352,10 @@
             renderGames(filtered);
         });
 
-        // 7. 當網址 Hash 改變時，自動刷新頁面載入新分頁
+        // 當網址 Hash 改變時自動刷新頁面
         window.addEventListener('hashchange', () => {
             window.location.reload();
         });
-
-        // 執行驗證與初始化
-        init();
     </script>
 </body>
 </html>
